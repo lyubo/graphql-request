@@ -185,10 +185,11 @@ export class GraphQLWebSocketClient {
     operationName: string | undefined,
     subscriber: GraphQLSubscriber<T, E>,
     variables?: V,
+    extensions?: any,
   ): UnsubscribeCallback {
     const subscriptionId = (this.socketState.lastRequestId++).toString()
     this.socketState.subscriptions[subscriptionId] = { query, variables, subscriber }
-    this.socket.send(Subscribe(subscriptionId, { query, operationName, variables }).text)
+    this.socket.send(Subscribe(subscriptionId, { query, operationName, variables, extensions }).text)
     return () => {
       this.socket.send(Complete(subscriptionId).text)
       delete this.socketState.subscriptions[subscriptionId]
@@ -198,6 +199,7 @@ export class GraphQLWebSocketClient {
   rawRequest<T = any, V extends Variables = Variables, E = any>(
     query: string,
     variables?: V,
+    extensions?: any,
   ): Promise<{ data: T; extensions?: E }> {
     return new Promise<{ data: T; extensions?: E; headers?: Headers; status?: number }>((resolve, reject) => {
       let result: { data: T; extensions?: E }
@@ -209,6 +211,7 @@ export class GraphQLWebSocketClient {
           complete: () => resolve(result),
         },
         variables,
+        extensions,
       )
     })
   }
@@ -216,6 +219,7 @@ export class GraphQLWebSocketClient {
   request<T = any, V extends Variables = Variables>(
     document: RequestDocument | TypedDocumentNode<T, V>,
     variables?: V,
+    extensions?: any,
   ): Promise<T> {
     return new Promise<T>((resolve, reject) => {
       let result: T
@@ -227,6 +231,7 @@ export class GraphQLWebSocketClient {
           complete: () => resolve(result),
         },
         variables,
+        extensions,
       )
     })
   }
@@ -235,17 +240,19 @@ export class GraphQLWebSocketClient {
     document: RequestDocument | TypedDocumentNode<T, V>,
     subscriber: GraphQLSubscriber<T, E>,
     variables?: V,
+    extensions?: any,
   ): UnsubscribeCallback {
     const { query, operationName } = resolveRequestDocument(document)
-    return this.makeSubscribe(query, operationName, subscriber, variables)
+    return this.makeSubscribe(query, operationName, subscriber, variables, extensions)
   }
 
   rawSubscribe<T = any, V extends Variables = Variables, E = any>(
     query: string,
     subscriber: GraphQLSubscriber<T, E>,
     variables?: V,
+    extensions?: any,
   ): UnsubscribeCallback {
-    return this.makeSubscribe(query, undefined, subscriber, variables)
+    return this.makeSubscribe(query, undefined, subscriber, variables, extensions)
   }
 
   ping(payload: Variables) {
